@@ -1,0 +1,35 @@
+import os
+from pathlib import Path
+from pydantic_settings import BaseSettings
+
+
+BASE_DIR = Path(__file__).resolve().parent.parent
+DATA_DIR = BASE_DIR / "data"
+DATA_DIR.mkdir(exist_ok=True)
+
+
+class Settings(BaseSettings):
+    APP_NAME: str = "AI Due Diligence Copilot"
+    APP_VERSION: str = "0.1.0"
+    DEBUG: bool = True
+
+    GROQ_API_KEY: str = ""
+    GROQ_MODEL: str = "llama-3.3-70b-versatile"
+    GROQ_BASE_URL: str = "https://api.groq.com/openai/v1"
+
+    EMBEDDING_MODEL: str = "all-MiniLM-L6-v2"
+    CHROMA_PERSIST_DIR: str = str(DATA_DIR / "chroma")
+    CHUNK_SIZE: int = 800
+    CHUNK_OVERLAP: int = 200
+    TOP_K_RESULTS: int = 8
+
+    DATABASE_URL: str = f"sqlite+aiosqlite:///{DATA_DIR / 'app.db'}"
+
+    CORS_ORIGINS: list[str] = ["http://localhost:3000", "http://localhost:5173"]
+
+    class Config:
+        env_file = ".env"
+        extra = "ignore"
+
+
+settings = Settings()
