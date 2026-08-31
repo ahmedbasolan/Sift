@@ -7,7 +7,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import get_db, DocumentRecord
 from app.models import UploadResponse, DocumentType
 from app.ingest import detect_doc_type, parse_document, chunk_pages
-from app.embeddings import add_chunks_to_collection, get_bm25_index
+from app.embeddings import add_chunks_to_collection
+from app.search import get_bm25_index
 from app.config import settings
 
 router = APIRouter()

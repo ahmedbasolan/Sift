@@ -39,8 +39,11 @@ def add_chunks_to_collection(
     chunks: list[dict],
     document_id: str,
     filename: str,
-    collection_name: str = "documents"
+    collection_name: str = "documents",
 ):
+    if not chunks:
+        return 0
+
     collection = get_or_create_collection(collection_name)
 
     ids = [c["id"] for c in chunks]
@@ -72,24 +75,31 @@ def search_similar(
     where: dict | None = None,
 ) -> list[dict]:
     collection = get_or_create_collection(collection_name)
+
+    if collection.count() == 0:
+        return []
+
     query_embedding = embed_texts([query])
 
-    where_filter = where if where else None
-    results = collection.query(
-        query_embeddings=query_embedding,
-        n_results=top_k,
-        where=where_filter,
-        include=["documents", "metadatas", "distances"],
-    )
+    try:
+        results = collection.query(
+            query_embeddings=query_embedding,
+            n_results=min(top_k, collection.count()),
+            where=where if where else None,
+        )
+    except Exception:
+        return []
 
     results_list = []
-    if results["documents"] and results["documents"][0]:
+    if results and results.get("documents") and results["documents"][0]:
         for i, doc in enumerate(results["documents"][0]):
+            meta = results["metadatas"][0][i] if results.get("metadatas") else {}
+            dist = results["distances"][0][i] if results.get("distances") else 0
             results_list.append({
                 "text": doc,
-                "metadata": results["metadatas"][0][i] if results["metadatas"] else {},
-                "distance": results["distances"][0][i] if results["distances"] else 0,
-                "score": 1 - (results["distances"][0][i] if results["distances"] else 0),
+                "metadata": meta,
+                "distance": dist,
+                "score": 1 - dist,
             })
     return results_list
 

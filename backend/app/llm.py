@@ -1,3 +1,4 @@
+import asyncio
 import json
 import httpx
 from app.config import settings
@@ -25,14 +26,24 @@ async def call_groq(
     if response_format:
         payload["response_format"] = response_format
 
-    async with httpx.AsyncClient(timeout=60.0) as client:
-        resp = await client.post(
-            f"{settings.GROQ_BASE_URL}/chat/completions",
-            headers=headers,
-            json=payload,
-        )
-        resp.raise_for_status()
-        return resp.json()["choices"][0]["message"]["content"]
+    max_retries = 5
+    for attempt in range(max_retries):
+        async with httpx.AsyncClient(timeout=60.0) as client:
+            resp = await client.post(
+                f"{settings.GROQ_BASE_URL}/chat/completions",
+                headers=headers,
+                json=payload,
+            )
+            if resp.status_code == 429:
+                wait = min(2 ** attempt * 2, 30)
+                await asyncio.sleep(wait)
+                continue
+            resp.raise_for_status()
+            return resp.json()["choices"][0]["message"]["content"]
+
+    raise httpx.HTTPStatusError(
+        "Rate limit exceeded after retries", request=resp.request, response=resp
+    )
 
 
 async def generate_analysis(
@@ -67,7 +78,7 @@ Be factual and cite evidence. If information is missing, state it clearly."""
 
 
 async def extract_financial_metrics(context: str) -> str:
-    prompt = """Extract financial metrics from the document. Return JSON with these fields:
+    prompt = """Extract financial metrics from the document. Return ONLY valid JSON with these fields:
 {
     "revenue": "string or null",
     "revenue_growth": "string or null",
@@ -83,7 +94,8 @@ async def extract_financial_metrics(context: str) -> str:
     "mrr": "string or null",
     "custom": {}
 }
-Only include values that are explicitly stated in the document. Use null for missing fields."""
+Only include values that are explicitly stated. Use null for missing fields.
+Return ONLY the JSON object, no other text."""
     messages = [
         {"role": "system", "content": prompt},
         {"role": "user", "content": f"Document context:\n{context}"},
@@ -92,7 +104,7 @@ Only include values that are explicitly stated in the document. Use null for mis
 
 
 async def assess_risks(context: str) -> str:
-    prompt = """Analyze the document for risks. Return JSON array:
+    prompt = """Analyze the document for risks. Return ONLY a valid JSON array:
 [
     {
         "category": "market|financial|regulatory|operational|competitive",
@@ -103,7 +115,8 @@ async def assess_risks(context: str) -> str:
         "recommendation": "action item"
     }
 ]
-Be specific and cite actual evidence from the document. If no risks found, return empty array."""
+Be specific and cite actual evidence. If no risks found, return [].
+Return ONLY the JSON array, no other text."""
     messages = [
         {"role": "system", "content": prompt},
         {"role": "user", "content": f"Document context:\n{context}"},
@@ -125,8 +138,10 @@ Be concise and factual."""
 
 def _mock_response(messages: list[dict]) -> str:
     user_msg = messages[-1]["content"] if messages else ""
+    system_msg = messages[0]["content"] if len(messages) > 0 else ""
+    combined = (system_msg + " " + user_msg).lower()
 
-    if "financial metrics" in user_msg.lower() or "extract" in user_msg.lower():
+    if "financial metric" in combined or "extract" in combined:
         return json.dumps({
             "revenue": None, "revenue_growth": None,
             "gross_margin": None, "operating_margin": None,
@@ -135,8 +150,16 @@ def _mock_response(messages: list[dict]) -> str:
             "burn_rate": None, "runway_months": None,
             "arr": None, "mrr": None, "custom": {},
         })
-    if "risk" in user_msg.lower():
+    if "risk" in combined and "anomal" not in combined:
         return json.dumps([])
-    if "summary" in user_msg.lower():
-        return "Executive summary unavailable in offline mode. Add a GROQ_API_KEY to .env for real analysis."
+    if "executive summary" in combined or "senior financial analyst" in combined:
+        return (
+            "Company Overview: Analysis unavailable in offline mode.\n\n"
+            "Financial Health: Add a GROQ_API_KEY to .env for real analysis.\n\n"
+            "Key Strengths:\n- Offline mode placeholder\n\n"
+            "Key Risks:\n- Offline mode placeholder\n\n"
+            "Growth Opportunities:\n- Offline mode placeholder\n\n"
+            "Recommendation: Add a GROQ_API_KEY to enable full analysis.\n\n"
+            "Confidence Score: 0.0"
+        )
     return "Response unavailable in offline mode. Add a GROQ_API_KEY to .env for real analysis."

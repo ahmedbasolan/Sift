@@ -1,10 +1,7 @@
-import uuid
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import get_db, DocumentRecord
-from app.models import AnalysisResult, ExecutiveSummary, FinancialMetrics
 from app.analysis import run_analysis
-from app.config import settings
 
 router = APIRouter()
 

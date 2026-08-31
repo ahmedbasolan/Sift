@@ -53,8 +53,9 @@ def hybrid_search(
     top_k: int = 8,
     dense_weight: float = 0.6,
     sparse_weight: float = 0.4,
+    where: dict | None = None,
 ) -> list[dict]:
-    dense_results = search_similar(query, top_k=top_k)
+    dense_results = search_similar(query, top_k=top_k, where=where)
 
     bm25 = get_bm25_index()
     sparse_results = bm25.search(query, top_k=top_k)

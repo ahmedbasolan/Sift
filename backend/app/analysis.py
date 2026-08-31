@@ -4,12 +4,11 @@ from datetime import datetime
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.models import (
     AnalysisResult, ExecutiveSummary, FinancialMetrics,
-    RiskFinding, RiskCategory, RiskLevel, Citation, Document,
+    RiskFinding, RiskCategory, RiskLevel, Citation,
 )
 from app.database import DocumentRecord, AnalysisRecord
 from app.search import hybrid_search
 from app.llm import generate_summary, extract_financial_metrics, assess_risks
-from app.config import settings
 
 
 async def run_analysis(document_id: str, db: AsyncSession) -> AnalysisResult:
@@ -19,12 +18,15 @@ async def run_analysis(document_id: str, db: AsyncSession) -> AnalysisResult:
     if not doc:
         raise ValueError(f"Document {document_id} not found")
 
-    all_chunks = hybrid_search("*", top_k=50)
-    doc_chunks = [c for c in all_chunks if c.get("metadata", {}).get("document_id") == document_id]
+    # Search for chunks belonging to this document
+    # First try a generic query, then filter by document_id
+    doc_chunks = hybrid_search("financial report analysis document", top_k=50)
+    doc_chunks = [c for c in doc_chunks if c.get("metadata", {}).get("document_id") == document_id]
 
+    # If no results with filter, try broader search
     if not doc_chunks:
-        all_chunks = hybrid_search("financial report analysis", top_k=50)
-        doc_chunks = [c for c in all_chunks if c.get("metadata", {}).get("document_id") == document_id]
+        doc_chunks = hybrid_search("revenue growth risk financial", top_k=50)
+        doc_chunks = [c for c in doc_chunks if c.get("metadata", {}).get("document_id") == document_id]
 
     context = "\n\n".join(
         f"[Source: {c['metadata'].get('filename', 'unknown')}, Page {c['metadata'].get('page_num', '?')}]\n{c['text']}"
@@ -32,7 +34,7 @@ async def run_analysis(document_id: str, db: AsyncSession) -> AnalysisResult:
     )
 
     if not context.strip():
-        context = "No document content available for analysis."
+        context = f"Document: {doc.filename}. No extractable text content available for analysis."
 
     summary_text = await generate_summary(context)
     metrics_text = await extract_financial_metrics(context)
@@ -76,34 +78,62 @@ def _parse_summary(text: str) -> ExecutiveSummary:
         key_risks=_extract_list(text, "risks"),
         growth_opportunities=_extract_list(text, "opportunities"),
         recommendation=_extract_section(text, "recommendation") or "Further analysis recommended",
-        confidence_score=0.5,
+        confidence_score=_extract_confidence(text),
     )
+
+
+def _extract_confidence(text: str) -> float:
+    import re
+    match = re.search(r'confidence\s*(?:score)?[:\s]*(\d+\.?\d*)', text, re.IGNORECASE)
+    if match:
+        val = float(match.group(1))
+        return val if val <= 1.0 else val / 100.0
+    return 0.5
 
 
 def _parse_metrics(text: str) -> FinancialMetrics:
     try:
-        data = json.loads(text)
-        return FinancialMetrics(**{k: v for k, v in data.items() if k in FinancialMetrics.model_fields})
-    except (json.JSONDecodeError, TypeError):
-        return FinancialMetrics()
+        # Try to extract JSON from response (may be wrapped in markdown code block)
+        cleaned = text.strip()
+        if cleaned.startswith("```"):
+            cleaned = cleaned.split("\n", 1)[1] if "\n" in cleaned else cleaned[3:]
+            cleaned = cleaned.rsplit("```", 1)[0]
+        data = json.loads(cleaned)
+        if isinstance(data, dict):
+            return FinancialMetrics(**{k: v for k, v in data.items() if k in FinancialMetrics.model_fields})
+    except (json.JSONDecodeError, TypeError, ValueError):
+        pass
+    return FinancialMetrics()
 
 
 def _parse_risks(text: str) -> list[RiskFinding]:
     try:
-        data = json.loads(text)
+        cleaned = text.strip()
+        if cleaned.startswith("```"):
+            cleaned = cleaned.split("\n", 1)[1] if "\n" in cleaned else cleaned[3:]
+            cleaned = cleaned.rsplit("```", 1)[0]
+        data = json.loads(cleaned)
         if not isinstance(data, list):
             return []
         risks = []
         for item in data:
+            if not isinstance(item, dict):
+                continue
             try:
+                cat_str = item.get("category", "operational")
+                if cat_str not in [c.value for c in RiskCategory]:
+                    cat_str = "operational"
+                sev_str = item.get("severity", "medium")
+                if sev_str not in [s.value for s in RiskLevel]:
+                    sev_str = "medium"
                 risks.append(RiskFinding(
-                    category=RiskCategory(item.get("category", "operational")),
+                    category=RiskCategory(cat_str),
                     title=item.get("title", "Unknown risk"),
                     description=item.get("description", ""),
-                    severity=RiskLevel(item.get("severity", "medium")),
+                    severity=RiskLevel(sev_str),
                     evidence=[
                         Citation(text=e.get("text", ""), source="document", trust_level=e.get("trust_level", "inference"))
-                        for e in item.get("evidence", [])
+                        for e in item.get("evidence", []) if isinstance(e, dict)
                     ],
                     recommendation=item.get("recommendation", ""),
                 ))
