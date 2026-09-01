@@ -1,73 +1,78 @@
 # AI Due Diligence Copilot
 
-An AI-powered platform that analyzes financial documents — company filings, financial statements, investor presentations, and market reports — to accelerate due diligence workflows. Delivers source-backed risk assessments, growth opportunities, and executive summaries in seconds.
+A Retrieval-Augmented Generation (RAG) platform that analyzes company filings, financial statements, investor presentations, and market reports to deliver source-backed risk assessments, growth opportunities, and executive summaries.
 
-## Architecture
+**Live Demo:** [Replit URL](https://replit.com/@ahmed/ai-dd-copilot) (update after deploy)
 
-```
-┌─────────────────────────────────────────────┐
-│          Next.js Frontend                    │
-│  Upload · Dashboard · Analysis · Chat        │
-└──────────────────┬──────────────────────────┘
-                   │
-┌──────────────────▼──────────────────────────┐
-│          FastAPI Backend                     │
-│                                              │
-│  Upload → Parse → Chunk → Embed → Store     │
-│  Query → Hybrid Search → Groq LLM → Response│
-└──────────┬───────────────┬──────────────────┘
-           │               │
-      ┌────▼────┐    ┌─────▼─────┐
-      │ ChromaDB │    │  SQLite   │
-      │ (vectors)│    │(metadata) │
-      └─────────┘    └───────────┘
-```
+## Features
+
+- **Multi-format document ingestion** — PDF, DOCX, PPTX, XLSX, CSV, TXT, MD, HTML
+- **Hybrid RAG search** — BM25 sparse + dense embeddings with Reciprocal Rank Fusion
+- **LLM-powered analysis** — Executive summaries, risk assessments, financial metric extraction
+- **Source-grounded chat** — Ask questions about uploaded documents with citation tracking
+- **Report export** — Markdown and HTML report generation
+- **Zero-cost stack** — Free tier everything (Groq, ChromaDB, sentence-transformers)
 
 ## Tech Stack
 
 | Layer | Technology |
 |-------|-----------|
-| Frontend | Next.js 14, TypeScript, Tailwind CSS, Recharts |
-| Backend | FastAPI, Python 3.12 |
-| LLM | Groq (Llama 3.3 70B) — free tier, 14,400 req/day |
-| Embeddings | sentence-transformers (all-MiniLM-L6-v2) |
+| LLM | Groq (openai/gpt-oss-120b) |
+| Embeddings | sentence-transformers all-MiniLM-L6-v2 |
 | Vector DB | ChromaDB (embedded) |
-| Database | SQLite |
-| Search | Hybrid RAG (BM25 + Dense + RRF Fusion) |
+| Database | SQLite + SQLAlchemy async |
+| Backend | FastAPI + Python 3.12 |
+| Frontend | Next.js 14 + TypeScript + Tailwind CSS |
+| Search | Hybrid RAG (BM25 + dense + RRF) |
+| Charts | Recharts |
 
-## Quick Start
+## Architecture
 
-### Prerequisites
-- Python 3.11+
-- Node.js 18+
-- A Groq API key (free at https://console.groq.com)
-
-### Backend
-
-```bash
-cd backend
-python -m venv .venv
-# Windows:
-.venv\Scripts\activate
-# macOS/Linux:
-source .venv/bin/activate
-
-pip install -r requirements.txt
-cp .env.example .env
-# Add your GROQ_API_KEY to .env
-
-uvicorn app.main:app --reload
-# API docs at http://localhost:8000/docs
+```
+┌─────────────┐     ┌──────────────┐     ┌─────────────┐
+│   Frontend   │────▶│    Backend    │────▶│   Groq API   │
+│  Next.js     │     │   FastAPI     │     │  (LLM)       │
+│  :3000       │     │   :8000       │     └─────────────┘
+└─────────────┘     └──────┬───────┘
+                           │
+                    ┌──────┴───────┐
+                    │              │
+              ┌─────▼─────┐ ┌─────▼─────┐
+              │ ChromaDB   │ │  SQLite    │
+              │ (vectors)  │ │ (metadata) │
+              └───────────┘ └───────────┘
 ```
 
-### Frontend
+## Getting Started
+
+### Local Development
 
 ```bash
+# Backend
+cd backend
+python -m venv .venv
+.venv\Scripts\activate  # Windows
+source .venv/bin/activate  # Mac/Linux
+pip install -r requirements.txt
+
+# Add your Groq API key
+cp .env.example .env
+# Edit .env with your GROQ_API_KEY
+
+# Start backend
+uvicorn app.main:app --reload --port 8000
+
+# Frontend (new terminal)
 cd frontend
 npm install
 npm run dev
-# App at http://localhost:3000
 ```
+
+### Replit
+
+1. Import this repo to Replit
+2. Add `GROQ_API_KEY` to Replit Secrets
+3. Click Run
 
 ### Docker
 
@@ -75,39 +80,33 @@ npm run dev
 docker-compose up --build
 ```
 
-## Features
-
-- **Multi-format ingestion**: PDF, PPTX, DOCX, XLSX, CSV, TXT, Markdown, HTML
-- **Hybrid RAG**: Dense embeddings + BM25 with Reciprocal Rank Fusion
-- **Financial extraction**: Revenue, margins, EBITDA, burn rate, runway, ARR/MRR
-- **Risk engine**: 5 categories (market, financial, regulatory, operational, competitive)
-- **Executive summaries**: AI-generated with confidence scores
-- **Source citations**: Every claim traced to source with trust labels
-- **Grounded chat**: Ask questions over your documents
-- **Report export**: Markdown and HTML formats
-
 ## API Endpoints
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| POST | `/upload` | Upload a document |
-| GET | `/documents` | List all documents |
-| DELETE | `/documents/{id}` | Delete a document |
-| POST | `/analyze/{id}` | Run due diligence analysis |
-| GET | `/analyses` | List all analyses |
-| GET | `/analyses/{id}` | Get analysis details |
-| POST | `/chat` | Ask questions about documents |
-| GET | `/report/{id}` | Get report (markdown/html) |
 | GET | `/health` | Health check |
+| POST | `/upload` | Upload document |
+| GET | `/documents` | List documents |
+| DELETE | `/documents/{id}` | Delete document |
+| POST | `/analyze/{id}` | Run analysis |
+| GET | `/analyses` | List analyses |
+| GET | `/analyses/{id}` | Get analysis detail |
+| POST | `/chat` | Ask questions |
+| GET | `/report/{id}` | Export report |
+
+## Environment Variables
+
+```bash
+GROQ_API_KEY=gsk_xxxxx          # Required: Groq API key
+NEXT_PUBLIC_API_URL=http://localhost:8000  # Frontend API URL
+```
 
 ## How It Works
 
-1. **Upload** — Drop a PDF, presentation, or spreadsheet
-2. **Parse & Chunk** — Document is parsed with section-aware chunking
-3. **Embed** — Chunks are embedded using sentence-transformers
-4. **Index** — Stored in ChromaDB (dense) + BM25 (sparse)
-5. **Analyze** — Hybrid search retrieves relevant context → Groq LLM generates analysis
-6. **Report** — Executive summary, financial metrics, risk assessment with citations
+1. **Upload** — Documents are parsed (text extracted), chunked, and embedded
+2. **Index** — Chunks stored in ChromaDB (vectors) + SQLite (metadata)
+3. **Analyze** — Hybrid search retrieves relevant chunks, LLM generates summary/risks/metrics
+4. **Chat** — Questions go through the same RAG pipeline with source citations
 
 ## License
 
