@@ -2,9 +2,9 @@ export default function Home() {
   return (
     <div className="flex flex-col items-center justify-center min-h-[70vh] text-center">
       <div className="w-16 h-16 bg-primary-600 rounded-2xl flex items-center justify-center mb-6">
-        <span className="text-white font-bold text-2xl">DD</span>
+        <span className="text-white font-bold text-2xl">S</span>
       </div>
-      <h1 className="text-4xl font-bold text-gray-900 mb-4">AI Due Diligence Copilot</h1>
+      <h1 className="text-4xl font-bold text-gray-900 mb-4">Sift</h1>
       <p className="text-lg text-gray-600 max-w-xl mb-8">
         Upload financial documents. Get source-backed risk assessments, growth opportunities,
         and executive summaries in seconds.

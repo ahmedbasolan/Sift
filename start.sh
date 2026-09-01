@@ -1,6 +1,6 @@
 #!/bin/bash
 
-echo "=== AI Due Diligence Copilot ==="
+echo "=== Sift ==="
 echo "Starting backend and frontend..."
 
 # Install backend deps if needed

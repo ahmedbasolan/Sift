@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'AI Due Diligence Copilot',
+  title: 'Sift - AI Due Diligence',
   description: 'Analyze financial documents with AI-powered risk assessment and executive summaries.',
 };
 
