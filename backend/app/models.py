@@ -64,6 +64,7 @@ class RiskFinding(BaseModel):
 
 
 class ExecutiveSummary(BaseModel):
+    company_name: str | None = None
     company_overview: str
     financial_health: str
     key_strengths: list[str]

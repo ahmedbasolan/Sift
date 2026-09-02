@@ -1,4 +1,5 @@
 import json
+import re
 import uuid
 from datetime import datetime
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -71,20 +72,57 @@ async def run_analysis(document_id: str, db: AsyncSession) -> AnalysisResult:
 
 
 def _parse_summary(text: str) -> ExecutiveSummary:
+    company_name = None
+    name_match = re.search(r'(?:Executive Summary|Summary)\s*[-–]\s*(.+?)(?:\n|\*\*)', text)
+    if name_match:
+        company_name = name_match.group(1).strip().strip('*').strip()
+
     return ExecutiveSummary(
-        company_overview=_extract_section(text, "overview") or text[:200],
-        financial_health=_extract_section(text, "financial health") or "Analysis pending",
-        key_strengths=_extract_list(text, "strengths"),
-        key_risks=_extract_list(text, "risks"),
-        growth_opportunities=_extract_list(text, "opportunities"),
-        recommendation=_extract_section(text, "recommendation") or "Further analysis recommended",
+        company_name=company_name,
+        company_overview=_extract_table_section(text, "Company Overview") or _extract_section(text, "overview") or text[:300],
+        financial_health=_extract_table_section(text, "Financial Health") or _extract_section(text, "financial health") or "Analysis pending",
+        key_strengths=_extract_bullet_list(text, "Strengths"),
+        key_risks=_extract_bullet_list(text, "Risks"),
+        growth_opportunities=_extract_bullet_list(text, "Opportunities"),
+        recommendation=_extract_table_section(text, "Recommendation") or _extract_section(text, "recommendation") or "Further analysis recommended",
         confidence_score=_extract_confidence(text),
     )
 
 
+def _extract_table_section(text: str, label: str) -> str:
+    pattern = rf'\|\s*\*\*[^|]*?{re.escape(label)}[^|]*?\*\*\s*\|(.+?)\|'
+    match = re.search(pattern, text, re.DOTALL | re.IGNORECASE)
+    if match:
+        cell = match.group(1).strip()
+        cell = re.sub(r'<br\s*/?>', '\n', cell)
+        cell = re.sub(r'\*\*(.+?)\*\*', r'\1', cell)
+        cell = re.sub(r'\*(.+?)\*', r'\1', cell)
+        return cell.strip()
+    return ""
+
+
+def _extract_bullet_list(text: str, label: str) -> list[str]:
+    section = _extract_table_section(text, label)
+    if not section:
+        section = _extract_section(text, label.lower())
+    if not section:
+        return []
+    items = []
+    for line in section.split("\n"):
+        line = line.strip()
+        line = re.sub(r'^\d+\.\s*', '', line)
+        line = re.sub(r'^[-•*]\s*', '', line)
+        line = re.sub(r'\*\*(.+?)\*\*', r'\1', line)
+        line = re.sub(r'<br\s*/?>', '\n', line)
+        line = line.strip()
+        if len(line) > 10:
+            items.append(line)
+    return items[:5]
+
+
 def _extract_confidence(text: str) -> float:
-    import re
-    match = re.search(r'confidence\s*(?:score)?[:\s]*(\d+\.?\d*)', text, re.IGNORECASE)
+    cleaned = re.sub(r'\*\*', '', text)
+    match = re.search(r'confidence\s*(?:score)?[:\s]*(\d+\.?\d*)', cleaned, re.IGNORECASE)
     if match:
         val = float(match.group(1))
         return val if val <= 1.0 else val / 100.0
