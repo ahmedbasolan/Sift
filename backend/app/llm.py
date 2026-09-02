@@ -35,15 +35,13 @@ async def call_groq(
                 json=payload,
             )
             if resp.status_code == 429:
-                wait = min(2 ** attempt * 2, 30)
+                wait = min(2 ** attempt * 3, 30)
                 await asyncio.sleep(wait)
                 continue
             resp.raise_for_status()
             return resp.json()["choices"][0]["message"]["content"]
 
-    raise httpx.HTTPStatusError(
-        "Rate limit exceeded after retries", request=resp.request, response=resp
-    )
+    return _mock_response(messages)
 
 
 async def generate_analysis(

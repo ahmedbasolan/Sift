@@ -32,7 +32,7 @@ async def chat(req: ChatRequest):
         )
 
     context = "\n\n".join(
-        f"[{r['metadata'].get('filename', 'doc')}, p.{r['metadata'].get('page_num', '?')}]\n{r['text']}"
+        f"[{r.get('metadata', {}).get('filename', 'doc')}, p.{r.get('metadata', {}).get('page_num', '?')}]\n{r['text']}"
         for r in results
     )
 
@@ -41,8 +41,8 @@ async def chat(req: ChatRequest):
     citations = [
         Citation(
             text=r["text"][:200],
-            source=r["metadata"].get("filename", "unknown"),
-            page=r["metadata"].get("page_num"),
+            source=r.get("metadata", {}).get("filename", "unknown"),
+            page=r.get("metadata", {}).get("page_num"),
             trust_level="verified" if r.get("score", 0) > 0.7 else "inference",
         )
         for r in results[:5]

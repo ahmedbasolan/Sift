@@ -21,6 +21,8 @@ async def analyze_document(document_id: str, db: AsyncSession = Depends(get_db))
         analysis = await run_analysis(document_id, db)
         return analysis.model_dump()
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Analysis failed: {str(e)}")
 
 

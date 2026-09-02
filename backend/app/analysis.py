@@ -19,18 +19,23 @@ async def run_analysis(document_id: str, db: AsyncSession) -> AnalysisResult:
     if not doc:
         raise ValueError(f"Document {document_id} not found")
 
-    # Search for chunks belonging to this document
-    # First try a generic query, then filter by document_id
-    doc_chunks = hybrid_search("financial report analysis document", top_k=50)
-    doc_chunks = [c for c in doc_chunks if c.get("metadata", {}).get("document_id") == document_id]
+    # Search specifically for this document's chunks
+    doc_chunks = hybrid_search(
+        "financial report analysis document " + doc.filename,
+        top_k=50,
+        where={"document_id": document_id},
+    )
 
-    # If no results with filter, try broader search
+    # Fallback: broader search filtered by document_id
     if not doc_chunks:
-        doc_chunks = hybrid_search("revenue growth risk financial", top_k=50)
-        doc_chunks = [c for c in doc_chunks if c.get("metadata", {}).get("document_id") == document_id]
+        doc_chunks = hybrid_search(
+            "revenue growth risk financial summary",
+            top_k=50,
+            where={"document_id": document_id},
+        )
 
     context = "\n\n".join(
-        f"[Source: {c['metadata'].get('filename', 'unknown')}, Page {c['metadata'].get('page_num', '?')}]\n{c['text']}"
+        f"[Source: {c.get('metadata', {}).get('filename', 'unknown')}, Page {c.get('metadata', {}).get('page_num', '?')}]\n{c['text']}"
         for c in doc_chunks[:15]
     )
 
