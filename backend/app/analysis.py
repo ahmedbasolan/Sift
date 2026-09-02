@@ -1,7 +1,7 @@
 import json
 import re
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.models import (
     AnalysisResult, ExecutiveSummary, FinancialMetrics,
@@ -54,7 +54,7 @@ async def run_analysis(document_id: str, db: AsyncSession) -> AnalysisResult:
     analysis = AnalysisResult(
         id=analysis_id,
         document_id=document_id,
-        created_at=datetime.utcnow(),
+        created_at=datetime.now(timezone.utc),
         executive_summary=executive_summary,
         financial_metrics=financial_metrics,
         risks=risks,
@@ -198,17 +198,3 @@ def _extract_section(text: str, keyword: str) -> str:
     if end == -1:
         end = min(len(text), idx + 500)
     return text[start:end].strip()
-
-
-def _extract_list(text: str, keyword: str) -> list[str]:
-    section = _extract_section(text, keyword)
-    if not section:
-        return []
-    items = []
-    for line in section.split("\n"):
-        line = line.strip()
-        if line.startswith(("-", "•", "*")) or (len(line) > 3 and line[0].isdigit()):
-            item = line.lstrip("-•*0123456789. ").strip()
-            if item:
-                items.append(item)
-    return items[:5]

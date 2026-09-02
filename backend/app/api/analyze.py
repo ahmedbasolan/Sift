@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
 from app.database import get_db, DocumentRecord
 from app.analysis import run_analysis
 
@@ -8,7 +9,6 @@ router = APIRouter()
 
 @router.post("/analyze/{document_id}")
 async def analyze_document(document_id: str, db: AsyncSession = Depends(get_db)):
-    from sqlalchemy import select
     result = await db.execute(select(DocumentRecord).where(DocumentRecord.id == document_id))
     doc = result.scalar_one_or_none()
     if not doc:
@@ -28,7 +28,6 @@ async def analyze_document(document_id: str, db: AsyncSession = Depends(get_db))
 
 @router.get("/analyses")
 async def list_analyses(db: AsyncSession = Depends(get_db)):
-    from sqlalchemy import select
     from app.database import AnalysisRecord
     result = await db.execute(select(AnalysisRecord).order_by(AnalysisRecord.created_at.desc()))
     records = result.scalars().all()
@@ -44,7 +43,6 @@ async def list_analyses(db: AsyncSession = Depends(get_db)):
 
 @router.get("/analyses/{analysis_id}")
 async def get_analysis(analysis_id: str, db: AsyncSession = Depends(get_db)):
-    from sqlalchemy import select
     from app.database import AnalysisRecord
     result = await db.execute(select(AnalysisRecord).where(AnalysisRecord.id == analysis_id))
     record = result.scalar_one_or_none()

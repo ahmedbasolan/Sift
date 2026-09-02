@@ -12,7 +12,7 @@ class Settings(BaseSettings):
 
     APP_NAME: str = "Sift"
     APP_VERSION: str = "0.1.0"
-    DEBUG: bool = True
+    DEBUG: bool = False
 
     GROQ_API_KEY: str = ""
     GROQ_MODEL: str = "openai/gpt-oss-120b"

@@ -87,7 +87,9 @@ def search_similar(
             n_results=min(top_k, collection.count()),
             where=where if where else None,
         )
-    except Exception:
+    except Exception as e:
+        import sys
+        print(f"[Sift] Embedding search error: {e}", file=sys.stderr)
         return []
 
     results_list = []
@@ -108,5 +110,6 @@ def delete_document_chunks(document_id: str, collection_name: str = "documents")
     try:
         collection = get_or_create_collection(collection_name)
         collection.delete(where={"document_id": document_id})
-    except Exception:
-        pass
+    except Exception as e:
+        import sys
+        print(f"[Sift] Warning: failed to delete chunks for {document_id}: {e}", file=sys.stderr)

@@ -1,4 +1,4 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 from app.models import ChatRequest, ChatResponse, Citation
 from app.search import hybrid_search
 from app.llm import answer_question
@@ -12,6 +12,9 @@ async def chat(req: ChatRequest):
     query = req.message.strip()
     if not query:
         return ChatResponse(answer="Please provide a question.", citations=[], route="error")
+
+    if len(query) > 5000:
+        raise HTTPException(status_code=400, detail="Message too long (max 5000 characters)")
 
     where_filter = None
     if req.document_ids:
@@ -43,7 +46,7 @@ async def chat(req: ChatRequest):
             text=r["text"][:200],
             source=r.get("metadata", {}).get("filename", "unknown"),
             page=r.get("metadata", {}).get("page_num"),
-            trust_level="verified" if r.get("score", 0) > 0.7 else "inference",
+            trust_level="verified" if r.get("rrf_score", 0) > 0.5 else "inference",
         )
         for r in results[:5]
     ]

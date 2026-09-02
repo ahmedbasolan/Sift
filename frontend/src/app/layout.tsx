@@ -15,9 +15,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <div className="max-w-7xl mx-auto flex items-center justify-between">
               <a href="/" className="flex items-center gap-2">
                 <div className="w-8 h-8 bg-primary-600 rounded-lg flex items-center justify-center">
-                  <span className="text-white font-bold text-sm">DD</span>
+                  <span className="text-white font-bold text-sm">S</span>
                 </div>
-                <span className="text-lg font-semibold text-gray-900">DD Copilot</span>
+                <span className="text-lg font-semibold text-gray-900">Sift</span>
               </a>
               <div className="flex items-center gap-6">
                 <a href="/upload" className="text-sm text-gray-600 hover:text-primary-600">Upload</a>

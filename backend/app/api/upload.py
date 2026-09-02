@@ -1,6 +1,7 @@
 import uuid
 import shutil
 import tempfile
+import re
 from pathlib import Path
 from fastapi import APIRouter, UploadFile, File, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -13,11 +14,20 @@ from app.config import settings
 
 router = APIRouter()
 
+MAX_FILE_SIZE = 50 * 1024 * 1024  # 50 MB
+
+
+def _sanitize_filename(filename: str) -> str:
+    """Remove path traversal and dangerous characters from filename."""
+    filename = re.sub(r'[^\w\s\-\.]', '_', filename)
+    filename = re.sub(r'_{2,}', '_', filename)
+    return filename.strip('_') or "unknown"
+
 
 @router.post("/upload", response_model=UploadResponse)
 async def upload_document(file: UploadFile = File(...), db: AsyncSession = Depends(get_db)):
     doc_id = str(uuid.uuid4())
-    filename = file.filename or "unknown"
+    filename = _sanitize_filename(file.filename or "unknown")
     doc_type = detect_doc_type(filename)
 
     if doc_type == DocumentType.UNKNOWN:
@@ -27,11 +37,17 @@ async def upload_document(file: UploadFile = File(...), db: AsyncSession = Depen
     tmp_file = tmp_dir / filename
 
     try:
-        with open(tmp_file, "wb") as f:
-            content = await file.read()
-            f.write(content)
-
+        content = await file.read()
         file_size = len(content)
+
+        if file_size > MAX_FILE_SIZE:
+            raise HTTPException(
+                status_code=413,
+                detail=f"File too large: {file_size / (1024*1024):.1f} MB (max 50 MB)",
+            )
+
+        with open(tmp_file, "wb") as f:
+            f.write(content)
         pages, page_count = parse_document(str(tmp_file), filename)
         chunks = chunk_pages(pages, settings.CHUNK_SIZE, settings.CHUNK_OVERLAP)
 
@@ -97,6 +113,7 @@ async def list_documents(db: AsyncSession = Depends(get_db)):
 async def delete_document(doc_id: str, db: AsyncSession = Depends(get_db)):
     from sqlalchemy import select, delete
     from app.embeddings import delete_document_chunks
+    from app.database import AnalysisRecord
 
     result = await db.execute(select(DocumentRecord).where(DocumentRecord.id == doc_id))
     doc = result.scalar_one_or_none()
@@ -104,6 +121,7 @@ async def delete_document(doc_id: str, db: AsyncSession = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Document not found")
 
     delete_document_chunks(doc_id)
+    await db.execute(delete(AnalysisRecord).where(AnalysisRecord.document_id == doc_id))
     await db.execute(delete(DocumentRecord).where(DocumentRecord.id == doc_id))
     await db.commit()
 

@@ -27,19 +27,25 @@ async def call_groq(
         payload["response_format"] = response_format
 
     max_retries = 5
-    for attempt in range(max_retries):
-        async with httpx.AsyncClient(timeout=60.0) as client:
-            resp = await client.post(
-                f"{settings.GROQ_BASE_URL}/chat/completions",
-                headers=headers,
-                json=payload,
-            )
-            if resp.status_code == 429:
-                wait = min(2 ** attempt * 3, 30)
-                await asyncio.sleep(wait)
-                continue
-            resp.raise_for_status()
-            return resp.json()["choices"][0]["message"]["content"]
+    async with httpx.AsyncClient(timeout=60.0) as client:
+        for attempt in range(max_retries):
+            try:
+                resp = await client.post(
+                    f"{settings.GROQ_BASE_URL}/chat/completions",
+                    headers=headers,
+                    json=payload,
+                )
+                if resp.status_code == 429:
+                    wait = min(2 ** attempt * 3, 30)
+                    await asyncio.sleep(wait)
+                    continue
+                resp.raise_for_status()
+                data = resp.json()
+                return data["choices"][0]["message"]["content"]
+            except (KeyError, IndexError, ValueError) as e:
+                import sys
+                print(f"[Sift] Groq response parse error: {e}", file=sys.stderr)
+                return _mock_response(messages)
 
     return _mock_response(messages)
 
