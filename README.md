@@ -2,7 +2,7 @@
 
 AI-powered due diligence copilot. Upload financial documents, get source-backed risk assessments, growth opportunities, and executive summaries in seconds.
 
-**Live Demo:** [Replit](https://replit.com/@ahmed/sift) *(update after deploy)*
+**Live Demo:** [Sift Demo](https://sift-demo.vercel.app) *(coming soon)*
 
 ## What It Does
 
@@ -13,6 +13,20 @@ Upload any financial document — 10-K filings, pitch decks, annual reports, inv
 - Extracts **financial metrics** (revenue, margins, burn rate, runway, etc.)
 - Answers **follow-up questions** with source citations and page references
 - Exports **Markdown/HTML reports** for sharing
+
+## Demo Files
+
+Ready-to-use sample documents for testing:
+
+| File | Company | Type | What It Shows |
+|------|---------|------|---------------|
+| `snap_inc_10k_2024.md` | Snap Inc. | 10-K Annual Report | Real SEC filing — revenue growth, profitability timeline, AR strategy |
+| `notion_series_c.md` | Notion | Series B Pitch Deck | Startup fundraising — traction, unit economics, competitive landscape |
+| `wework_dd_brief.md` | WeWork | Due Diligence Brief | **Failing company** — lease analysis, governance failures, bankruptcy timeline |
+| `zerica_series_a.md` | Zerica (fictional) | Series A Pitch Deck | Early-stage SaaS — metrics, market opportunity, team |
+| `quickship_logistics_dd.md` | QuickShip (fictional) | DD Brief | Distressed company — cash crisis, negative unit economics |
+
+**Upload any of these through the UI to see Sift in action.**
 
 ## Features
 
