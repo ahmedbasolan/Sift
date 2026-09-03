@@ -2,8 +2,6 @@
 
 AI-powered due diligence copilot. Upload financial documents, get source-backed risk assessments, growth opportunities, and executive summaries in seconds.
 
-**Live Demo:** [Sift Demo](https://sift-demo.vercel.app) *(coming soon)*
-
 ## What It Does
 
 Upload any financial document — 10-K filings, pitch decks, annual reports, investor presentations — and Sift instantly:
@@ -16,14 +14,14 @@ Upload any financial document — 10-K filings, pitch decks, annual reports, inv
 
 ## Demo Files
 
-Ready-to-use sample documents for testing:
+Ready-to-use sample documents in `sample_data/`:
 
 | File | Company | Type | What It Shows |
 |------|---------|------|---------------|
-| `snap_inc_10k_2024.md` | Snap Inc. | 10-K Annual Report | Real SEC filing — revenue growth, profitability timeline, AR strategy |
-| `notion_series_c.md` | Notion | Series B Pitch Deck | Startup fundraising — traction, unit economics, competitive landscape |
-| `wework_dd_brief.md` | WeWork | Due Diligence Brief | **Failing company** — lease analysis, governance failures, bankruptcy timeline |
-| `zerica_series_a.md` | Zerica (fictional) | Series A Pitch Deck | Early-stage SaaS — metrics, market opportunity, team |
+| `snap_inc_10k_2024.md` | Snap Inc. | 10-K Annual Report | Real SEC filing — revenue growth, profitability timeline |
+| `notion_series_c.md` | Notion | Series C Pitch Deck | Startup fundraising — traction, unit economics, 200% growth |
+| `wework_dd_brief.md` | WeWork | Due Diligence Brief | **Failing company** — lease analysis, governance failures, bankruptcy |
+| `zerica_series_a.md` | Zerica (fictional) | Series A Pitch Deck | Early-stage SaaS — metrics, market opportunity |
 | `quickship_logistics_dd.md` | QuickShip (fictional) | DD Brief | Distressed company — cash crisis, negative unit economics |
 
 **Upload any of these through the UI to see Sift in action.**
@@ -34,7 +32,7 @@ Ready-to-use sample documents for testing:
 - **Hybrid RAG** — BM25 sparse + dense embeddings with Reciprocal Rank Fusion
 - **Source-grounded chat** — Every answer cites its sources
 - **Zero-cost stack** — Free tier Groq, ChromaDB, sentence-transformers
-- **Docker ready** — One command to deploy
+- **50MB file limit** — Prevents OOM from oversized uploads
 
 ## Tech Stack
 
@@ -47,7 +45,6 @@ Ready-to-use sample documents for testing:
 | Backend | FastAPI + Python 3.12 |
 | Frontend | Next.js 14 + TypeScript + Tailwind CSS |
 | Search | Hybrid RAG (BM25 + dense + RRF) |
-| Charts | Recharts |
 
 ## Architecture
 
@@ -68,7 +65,11 @@ Ready-to-use sample documents for testing:
 
 ## Quick Start
 
-### Local
+### Option 1: Double-click (Windows)
+
+Run `start.bat` — installs deps and starts both servers automatically.
+
+### Option 2: Manual
 
 ```bash
 # Backend
@@ -77,7 +78,7 @@ python -m venv .venv
 .venv\Scripts\activate      # Windows
 source .venv/bin/activate   # Mac/Linux
 pip install -r requirements.txt
-cp .env.example .env        # Add your GROQ_API_KEY
+cp .env.example .env        # Then edit .env to add your GROQ_API_KEY
 uvicorn app.main:app --reload --port 8000
 
 # Frontend (new terminal)
@@ -86,17 +87,22 @@ npm install
 npm run dev
 ```
 
-### Replit
-
-1. Import this repo → [replit.com](https://replit.com)
-2. Add `GROQ_API_KEY` to Replit Secrets
-3. Click Run
-
-### Docker
+### Option 3: Docker
 
 ```bash
+# Set your Groq API key
+export GROQ_API_KEY=gsk_...
+export NEXT_PUBLIC_API_URL=http://localhost:8000
+
 docker-compose up --build
 ```
+
+### Get a Groq API Key
+
+1. Go to [console.groq.com](https://console.groq.com)
+2. Sign up (free)
+3. Create an API key
+4. Paste into `backend/.env` as `GROQ_API_KEY=gsk_...`
 
 ## API
 
