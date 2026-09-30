@@ -1,7 +1,7 @@
 import chromadb
 from sentence_transformers import SentenceTransformer
-from app.config import settings
 
+from app.config import settings
 
 _model: SentenceTransformer | None = None
 _client: chromadb.ClientAPI | None = None
@@ -23,10 +23,7 @@ def get_chroma_client() -> chromadb.ClientAPI:
 
 def get_or_create_collection(name: str = "documents"):
     client = get_chroma_client()
-    return client.get_or_create_collection(
-        name=name,
-        metadata={"hnsw:space": "cosine"}
-    )
+    return client.get_or_create_collection(name=name, metadata={"hnsw:space": "cosine"})
 
 
 def embed_texts(texts: list[str]) -> list[list[float]]:
@@ -55,6 +52,7 @@ def add_chunks_to_collection(
             "filename": filename,
             "page_num": c["page_num"],
             "chunk_index": i,
+            "chunk_id": c["id"],
         }
         for i, c in enumerate(chunks)
     ]
@@ -89,6 +87,7 @@ def search_similar(
         )
     except Exception as e:
         import sys
+
         print(f"[Sift] Embedding search error: {e}", file=sys.stderr)
         return []
 
@@ -97,12 +96,14 @@ def search_similar(
         for i, doc in enumerate(results["documents"][0]):
             meta = results["metadatas"][0][i] if results.get("metadatas") else {}
             dist = results["distances"][0][i] if results.get("distances") else 0
-            results_list.append({
-                "text": doc,
-                "metadata": meta,
-                "distance": dist,
-                "score": 1 - dist,
-            })
+            results_list.append(
+                {
+                    "text": doc,
+                    "metadata": meta,
+                    "distance": dist,
+                    "score": 1 - dist,
+                }
+            )
     return results_list
 
 
@@ -112,4 +113,5 @@ def delete_document_chunks(document_id: str, collection_name: str = "documents")
         collection.delete(where={"document_id": document_id})
     except Exception as e:
         import sys
+
         print(f"[Sift] Warning: failed to delete chunks for {document_id}: {e}", file=sys.stderr)
