@@ -1,9 +1,10 @@
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
+
 from pydantic import BaseModel, Field
 
 
-class DocumentType(str, Enum):
+class DocumentType(StrEnum):
     PDF = "pdf"
     PPTX = "pptx"
     DOCX = "docx"
@@ -15,14 +16,14 @@ class DocumentType(str, Enum):
     UNKNOWN = "unknown"
 
 
-class RiskLevel(str, Enum):
+class RiskLevel(StrEnum):
     LOW = "low"
     MEDIUM = "medium"
     HIGH = "high"
     CRITICAL = "critical"
 
 
-class RiskCategory(str, Enum):
+class RiskCategory(StrEnum):
     MARKET = "market"
     FINANCIAL = "financial"
     REGULATORY = "regulatory"
@@ -106,6 +107,7 @@ class ChatMessage(BaseModel):
 class ChatRequest(BaseModel):
     message: str
     document_ids: list[str] = Field(default_factory=list)
+    stream: bool = False
 
 
 class ChatResponse(BaseModel):

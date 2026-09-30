@@ -1,6 +1,8 @@
 import asyncio
 import json
+
 import httpx
+
 from app.config import settings
 
 
@@ -36,7 +38,7 @@ async def call_groq(
                     json=payload,
                 )
                 if resp.status_code == 429:
-                    wait = min(2 ** attempt * 3, 30)
+                    wait = min(2**attempt * 3, 30)
                     await asyncio.sleep(wait)
                     continue
                 resp.raise_for_status()
@@ -44,6 +46,7 @@ async def call_groq(
                 return data["choices"][0]["message"]["content"]
             except (KeyError, IndexError, ValueError) as e:
                 import sys
+
                 print(f"[Sift] Groq response parse error: {e}", file=sys.stderr)
                 return _mock_response(messages)
 
@@ -146,14 +149,23 @@ def _mock_response(messages: list[dict]) -> str:
     combined = (system_msg + " " + user_msg).lower()
 
     if "financial metric" in combined or "extract" in combined:
-        return json.dumps({
-            "revenue": None, "revenue_growth": None,
-            "gross_margin": None, "operating_margin": None,
-            "net_income": None, "ebitda": None,
-            "cash_position": None, "debt_level": None,
-            "burn_rate": None, "runway_months": None,
-            "arr": None, "mrr": None, "custom": {},
-        })
+        return json.dumps(
+            {
+                "revenue": None,
+                "revenue_growth": None,
+                "gross_margin": None,
+                "operating_margin": None,
+                "net_income": None,
+                "ebitda": None,
+                "cash_position": None,
+                "debt_level": None,
+                "burn_rate": None,
+                "runway_months": None,
+                "arr": None,
+                "mrr": None,
+                "custom": {},
+            }
+        )
     if "risk" in combined and "anomal" not in combined:
         return json.dumps([])
     if "executive summary" in combined or "senior financial analyst" in combined:
