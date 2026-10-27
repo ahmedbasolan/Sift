@@ -126,7 +126,7 @@ def chunk_pages(pages: list[dict], chunk_size: int = 800, overlap: int = 200) ->
             continue
 
         sentences = re.split(r"(?<=[.!?\n])\s+", text)
-        current_chunk = []
+        current_chunk: list[str] = []
         current_len = 0
 
         for sentence in sentences:

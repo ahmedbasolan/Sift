@@ -29,7 +29,8 @@ def get_or_create_collection(name: str = "documents"):
 def embed_texts(texts: list[str]) -> list[list[float]]:
     model = get_embedding_model()
     embeddings = model.encode(texts, show_progress_bar=False)
-    return embeddings.tolist()
+    vectors: list[list[float]] = embeddings.tolist()
+    return vectors
 
 
 def add_chunks_to_collection(
