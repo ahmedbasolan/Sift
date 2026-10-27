@@ -5,29 +5,44 @@ from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
 
 from app.config import settings
-from app.llm import answer_question
+from app.llm import LLMUnavailable, answer_question
 from app.models import ChatRequest, Citation
 from app.search import hybrid_search
 
 router = APIRouter()
 
 
-async def _stream_chat_response(results: list[dict], query: str) -> AsyncIterator[str]:
-    from app.llm import answer_question
+async def _answer_or_passages(context: str, query: str, results: list[dict]) -> tuple[str, str]:
+    """The LLM's answer, or, when it can't answer, the passages retrieval found:
+    search works without a key, so a question still gets the text that matches it."""
+    try:
+        return await answer_question(context, query), "rag"
+    except LLMUnavailable as e:
+        passages = "\n\n".join(
+            f"[{r.get('metadata', {}).get('filename', 'doc')}, p.{r.get('metadata', {}).get('page_num', '?')}]\n{r['text']}"
+            for r in results[:3]
+        )
+        answer = (
+            f"No answer was generated. {e}\n\n"
+            f"The passages that best match your question:\n\n{passages}"
+        )
+        return answer, "retrieval_only"
 
+
+def _stream_chat_response(results: list[dict], query: str) -> AsyncIterator[str]:
     context = "\n\n".join(
         f"[{r.get('metadata', {}).get('filename', 'doc')}, p.{r.get('metadata', {}).get('page_num', '?')}]\n{r['text']}"
         for r in results
     )
 
-    async def generate():
+    async def generate() -> AsyncIterator[str]:
         try:
-            answer = await answer_question(context, query)
-            full_text = answer
+            answer, route = await _answer_or_passages(context, query, results)
 
             data = {
                 "type": "content",
-                "content": full_text,
+                "content": answer,
+                "route": route,
                 "citations": [],
             }
             yield f"data: {json.dumps(data)}\n\n"
@@ -108,8 +123,8 @@ async def chat_stream(req: ChatRequest):
             },
         )
 
-    answer = await answer_question(context, query)
-    return {"answer": answer, "citations": [c.model_dump() for c in citations], "route": "rag"}
+    answer, route = await _answer_or_passages(context, query, results)
+    return {"answer": answer, "citations": [c.model_dump() for c in citations], "route": route}
 
 
 @router.post("/chat/sync")
@@ -144,7 +159,7 @@ async def chat_sync(req: ChatRequest):
         for r in results
     )
 
-    answer = await answer_question(context, query)
+    answer, route = await _answer_or_passages(context, query, results)
 
     citations = [
         Citation(
@@ -156,4 +171,4 @@ async def chat_sync(req: ChatRequest):
         for r in results[:5]
     ]
 
-    return {"answer": answer, "citations": [c.model_dump() for c in citations], "route": "rag"}
+    return {"answer": answer, "citations": [c.model_dump() for c in citations], "route": route}

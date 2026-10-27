@@ -4,6 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.analysis import run_analysis
 from app.database import DocumentRecord, get_db
+from app.llm import LLMUnavailable
 
 router = APIRouter()
 
@@ -21,6 +22,9 @@ async def analyze_document(document_id: str, db: AsyncSession = Depends(get_db))
     try:
         analysis = await run_analysis(document_id, db)
         return analysis.model_dump()
+    except LLMUnavailable as e:
+        # Nothing is saved: an analysis without the LLM would be placeholder text.
+        raise HTTPException(status_code=503, detail=f"Analysis needs the LLM. {e}") from e
     except Exception as e:
         import traceback
 
