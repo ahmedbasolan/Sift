@@ -1,5 +1,7 @@
 # QuickShip Logistics — Due Diligence Brief
 
+> **Fictional company, written for the Sift demo.** The company, its people and every figure are invented.
+
 ## Company Profile
 
 **QuickShip Logistics Inc.**

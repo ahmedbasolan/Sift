@@ -1,5 +1,7 @@
 # Zerica — Series A Pitch Deck (2024)
 
+> **Fictional company, written for the Sift demo.** The company, its people and every figure are invented.
+
 ## Company Overview
 
 **Zerica Inc.**

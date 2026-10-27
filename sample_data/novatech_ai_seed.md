@@ -1,5 +1,7 @@
 # NovaTech AI — Executive Briefing (Q4 2025)
 
+> **Fictional company, written for the Sift demo.** The company, its people and every figure are invented.
+
 ## Company Snapshot
 
 | Field | Detail |

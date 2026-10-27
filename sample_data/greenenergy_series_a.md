@@ -1,5 +1,7 @@
 # GreenEnergy Corp — Series A Pitch Deck
 
+> **Fictional company, written for the Sift demo.** The company, its people and every figure are invented.
+
 ## Company Overview
 
 **Founded:** 2022 | **HQ:** Austin, TX | **Employees:** 28
