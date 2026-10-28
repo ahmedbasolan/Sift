@@ -1,5 +1,7 @@
 # Sample financial data for testing
 
+> **Fictional company, written for the Sift demo.** The company, its people and every figure are invented.
+
 ## Acme Robotics - Series B Pitch Deck Summary
 
 **Company:** Acme Robotics Inc.

@@ -49,7 +49,7 @@ export default function ChatPage() {
         {messages.length === 0 && (
           <div className="text-center py-16 text-gray-400">
             <p className="text-lg mb-2">Ask anything about your documents</p>
-            <p className="text-sm">e.g., "What are the main risk factors?" or "Summarize revenue trends"</p>
+            <p className="text-sm">e.g., &ldquo;What are the main risk factors?&rdquo; or &ldquo;Summarize revenue trends&rdquo;</p>
           </div>
         )}
 

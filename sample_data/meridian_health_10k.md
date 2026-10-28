@@ -1,8 +1,10 @@
 # Meridian Health Systems — FY2025 Annual Report (10-K Summary)
 
+> **Fictional company, written for the Sift demo.** The company, its people and every figure are invented.
+
 ## Business Overview
 
-Meridian Health Systems (NASDAQ: MHS) is a healthcare technology company providing cloud-based electronic health record (EHR) solutions, telehealth platforms, and revenue cycle management services to mid-size hospitals and specialty clinics across the United States.
+Meridian Health Systems is a NASDAQ-listed healthcare technology company providing cloud-based electronic health record (EHR) solutions, telehealth platforms, and revenue cycle management services to mid-size hospitals and specialty clinics across the United States.
 
 **Headquarters:** Boston, MA | **Founded:** 2015 | **Employees:** 1,840
 

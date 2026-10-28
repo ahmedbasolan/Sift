@@ -1,7 +1,13 @@
 import asyncio
-import json
+
 import httpx
+
 from app.config import settings
+
+
+class LLMUnavailable(RuntimeError):
+    """The LLM gave no usable answer: no key, a rejected key, a rate limit, or an
+    unreadable reply. The message says which, in words a user can act on."""
 
 
 async def call_groq(
@@ -11,7 +17,10 @@ async def call_groq(
     response_format: dict | None = None,
 ) -> str:
     if not settings.GROQ_API_KEY:
-        return _mock_response(messages)
+        raise LLMUnavailable(
+            "No GROQ_API_KEY is set. Add one to backend/.env "
+            "(free at console.groq.com) and restart the backend."
+        )
 
     headers = {
         "Authorization": f"Bearer {settings.GROQ_API_KEY}",
@@ -35,19 +44,30 @@ async def call_groq(
                     headers=headers,
                     json=payload,
                 )
-                if resp.status_code == 429:
-                    wait = min(2 ** attempt * 3, 30)
-                    await asyncio.sleep(wait)
-                    continue
-                resp.raise_for_status()
-                data = resp.json()
-                return data["choices"][0]["message"]["content"]
-            except (KeyError, IndexError, ValueError) as e:
-                import sys
-                print(f"[Sift] Groq response parse error: {e}", file=sys.stderr)
-                return _mock_response(messages)
+            except httpx.TransportError as e:
+                raise LLMUnavailable(f"Could not reach Groq: {e}") from e
+            if resp.status_code == 429:
+                wait = min(2**attempt * 3, 30)
+                await asyncio.sleep(wait)
+                continue
+            if resp.status_code in (401, 403):
+                raise LLMUnavailable(
+                    "Groq rejected the GROQ_API_KEY. Check the key in backend/.env."
+                )
+            if resp.status_code >= 400:
+                raise LLMUnavailable(f"Groq returned HTTP {resp.status_code}. Try again shortly.")
+            try:
+                content = resp.json()["choices"][0]["message"]["content"]
+            except (KeyError, IndexError, TypeError, ValueError) as e:
+                raise LLMUnavailable("Groq returned a reply Sift could not read.") from e
+            if not isinstance(content, str) or not content.strip():
+                raise LLMUnavailable("Groq returned a reply Sift could not read: it had no text.")
+            return content
 
-    return _mock_response(messages)
+    raise LLMUnavailable(
+        "Groq's rate limit is still exceeded after several retries. "
+        "Wait a minute, or check your daily token quota at console.groq.com."
+    )
 
 
 async def generate_analysis(
@@ -138,32 +158,3 @@ Be concise and factual."""
         {"role": "user", "content": f"Context:\n{context}\n\nQuestion: {question}"},
     ]
     return await call_groq(messages)
-
-
-def _mock_response(messages: list[dict]) -> str:
-    user_msg = messages[-1]["content"] if messages else ""
-    system_msg = messages[0]["content"] if len(messages) > 0 else ""
-    combined = (system_msg + " " + user_msg).lower()
-
-    if "financial metric" in combined or "extract" in combined:
-        return json.dumps({
-            "revenue": None, "revenue_growth": None,
-            "gross_margin": None, "operating_margin": None,
-            "net_income": None, "ebitda": None,
-            "cash_position": None, "debt_level": None,
-            "burn_rate": None, "runway_months": None,
-            "arr": None, "mrr": None, "custom": {},
-        })
-    if "risk" in combined and "anomal" not in combined:
-        return json.dumps([])
-    if "executive summary" in combined or "senior financial analyst" in combined:
-        return (
-            "Company Overview: Analysis unavailable in offline mode.\n\n"
-            "Financial Health: Add a GROQ_API_KEY to .env for real analysis.\n\n"
-            "Key Strengths:\n- Offline mode placeholder\n\n"
-            "Key Risks:\n- Offline mode placeholder\n\n"
-            "Growth Opportunities:\n- Offline mode placeholder\n\n"
-            "Recommendation: Add a GROQ_API_KEY to enable full analysis.\n\n"
-            "Confidence Score: 0.0"
-        )
-    return "Response unavailable in offline mode. Add a GROQ_API_KEY to .env for real analysis."

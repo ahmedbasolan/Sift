@@ -1,8 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
-from app.database import get_db, DocumentRecord
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.analysis import run_analysis
+from app.database import DocumentRecord, get_db
+from app.llm import LLMUnavailable
 
 router = APIRouter()
 
@@ -20,20 +22,26 @@ async def analyze_document(document_id: str, db: AsyncSession = Depends(get_db))
     try:
         analysis = await run_analysis(document_id, db)
         return analysis.model_dump()
+    except LLMUnavailable as e:
+        # Nothing is saved: an analysis without the LLM would be placeholder text.
+        raise HTTPException(status_code=503, detail=f"Analysis needs the LLM. {e}") from e
     except Exception as e:
         import traceback
+
         traceback.print_exc()
-        raise HTTPException(status_code=500, detail=f"Analysis failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Analysis failed: {str(e)}") from e
 
 
 @router.get("/analyses")
 async def list_analyses(db: AsyncSession = Depends(get_db)):
     from app.database import AnalysisRecord
+
     result = await db.execute(select(AnalysisRecord).order_by(AnalysisRecord.created_at.desc()))
     records = result.scalars().all()
     return [
         {
-            "id": r.id, "document_id": r.document_id,
+            "id": r.id,
+            "document_id": r.document_id,
             "created_at": r.created_at.isoformat() if r.created_at else None,
             "summary_preview": (r.summary or "")[:200],
         }
@@ -44,6 +52,7 @@ async def list_analyses(db: AsyncSession = Depends(get_db)):
 @router.get("/analyses/{analysis_id}")
 async def get_analysis(analysis_id: str, db: AsyncSession = Depends(get_db)):
     from app.database import AnalysisRecord
+
     result = await db.execute(select(AnalysisRecord).where(AnalysisRecord.id == analysis_id))
     record = result.scalar_one_or_none()
     if not record:

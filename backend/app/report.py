@@ -1,4 +1,3 @@
-from datetime import datetime
 from app.models import AnalysisResult
 
 
@@ -60,7 +59,9 @@ def generate_markdown_report(analysis: AnalysisResult) -> str:
 """
     if analysis.risks:
         for i, risk in enumerate(analysis.risks, 1):
-            severity_emoji = {"low": "🟢", "medium": "🟡", "high": "🟠", "critical": "🔴"}.get(risk.severity.value, "⚪")
+            severity_emoji = {"low": "🟢", "medium": "🟡", "high": "🟠", "critical": "🔴"}.get(
+                risk.severity.value, "⚪"
+            )
             report += f"""### {i}. {severity_emoji} {risk.title}
 **Category:** {risk.category.value.title()}
 **Severity:** {risk.severity.value.upper()}
@@ -80,8 +81,8 @@ def generate_markdown_report(analysis: AnalysisResult) -> str:
     report += f"""
 ## Appendix
 
-- **Chunks analyzed:** {analysis.metadata.get('chunk_count', 'N/A')}
-- **Context length:** {analysis.metadata.get('context_length', 'N/A')} chars
+- **Chunks analyzed:** {analysis.metadata.get("chunk_count", "N/A")}
+- **Context length:** {analysis.metadata.get("context_length", "N/A")} chars
 - **Analysis ID:** {analysis.id}
 
 ---

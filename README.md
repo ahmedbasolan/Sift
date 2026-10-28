@@ -1,5 +1,12 @@
 # Sift
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Python 3.12](https://img.shields.io/badge/Python-3.12-blue)](https://python.org)
+[![Next.js 14](https://img.shields.io/badge/Next.js-14-black)](https://nextjs.org)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-green)](https://fastapi.tiangolo.com)
+[![CI](https://github.com/ahmedbasolan/Sift/actions/workflows/ci.yml/badge.svg)](https://github.com/ahmedbasolan/Sift/actions/workflows/ci.yml)
+[![Code Quality](https://img.shields.io/badge/Code_Quality-Ruff%2BMypy-orange)](https://github.com/ahmedbasolan/Sift)
+
 AI-powered due diligence copilot. Upload financial documents, get source-backed risk assessments, growth opportunities, and executive summaries in seconds.
 
 ## What It Does
@@ -14,15 +21,16 @@ Upload any financial document — 10-K filings, pitch decks, annual reports, inv
 
 ## Demo Files
 
-Ready-to-use sample documents in `sample_data/`:
+Ready-to-use sample documents in `sample_data/`. **All of them are fictional**: written for this demo, with invented companies, people and figures. None is a real company's filing or pitch deck, and each file says so at the top.
 
-| File | Company | Type | What It Shows |
-|------|---------|------|---------------|
-| `snap_inc_10k_2024.md` | Snap Inc. | 10-K Annual Report | Real SEC filing — revenue growth, profitability timeline |
-| `notion_series_c.md` | Notion | Series C Pitch Deck | Startup fundraising — traction, unit economics, 200% growth |
-| `wework_dd_brief.md` | WeWork | Due Diligence Brief | **Failing company** — lease analysis, governance failures, bankruptcy |
-| `zerica_series_a.md` | Zerica (fictional) | Series A Pitch Deck | Early-stage SaaS — metrics, market opportunity |
-| `quickship_logistics_dd.md` | QuickShip (fictional) | DD Brief | Distressed company — cash crisis, negative unit economics |
+| File | Type | What It Shows |
+|------|------|---------------|
+| `shutterbloom_10k_2024.md` | Listed company 10-K summary | Revenue growth, first profitable quarter, ad concentration |
+| `quillwork_series_c.md` | Series C pitch deck | Fast growth — traction, unit economics, 175% ARR growth |
+| `hivedesk_dd_brief.md` | Due diligence brief | **Failing company** — lease obligations, governance failures, bankruptcy |
+| `zerica_series_a.md` | Series A pitch deck | Early-stage fintech — metrics, market opportunity |
+| `quickship_logistics_dd.md` | DD brief | Distressed company — cash crisis, negative unit economics |
+| `acme_robotics_sample.md`, `greenenergy_series_a.md`, `meridian_health_10k.md`, `novatech_ai_seed.md` | Mixed | Shorter samples across stages and sectors |
 
 **Upload any of these through the UI to see Sift in action.**
 
@@ -103,6 +111,18 @@ docker-compose up --build
 2. Sign up (free)
 3. Create an API key
 4. Paste into `backend/.env` as `GROQ_API_KEY=gsk_...`
+
+### Without a key
+
+Upload and search work without one: chat answers with the passages that best match the question, with their citations, and says no answer was generated. Analysis needs the LLM, so it returns an error saying what to set and saves nothing. A rejected key or an exhausted Groq rate limit is reported the same way rather than stored as a result. `/health` reports `"groq": "no_key"`.
+
+### End-to-end check
+
+```bash
+python scripts/smoke_samples.py
+```
+
+Uploads and analyzes every file in `sample_data/` through the API, in a throwaway database, and exits non-zero if any fails. It calls Groq (about 3 calls per document), so it needs the key and is not part of CI.
 
 ## API
 

@@ -1,16 +1,18 @@
-import uuid
+import re
 import shutil
 import tempfile
-import re
+import uuid
 from pathlib import Path
-from fastapi import APIRouter, UploadFile, File, Depends, HTTPException
+
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.database import get_db, DocumentRecord
-from app.models import UploadResponse, DocumentType
-from app.ingest import detect_doc_type, parse_document, chunk_pages
-from app.embeddings import add_chunks_to_collection
-from app.search import get_bm25_index
+
 from app.config import settings
+from app.database import DocumentRecord, get_db
+from app.embeddings import add_chunks_to_collection
+from app.ingest import chunk_pages, detect_doc_type, parse_document
+from app.models import DocumentType, UploadResponse
+from app.search import get_bm25_index
 
 router = APIRouter()
 
@@ -19,9 +21,9 @@ MAX_FILE_SIZE = 50 * 1024 * 1024  # 50 MB
 
 def _sanitize_filename(filename: str) -> str:
     """Remove path traversal and dangerous characters from filename."""
-    filename = re.sub(r'[^\w\s\-\.]', '_', filename)
-    filename = re.sub(r'_{2,}', '_', filename)
-    return filename.strip('_') or "unknown"
+    filename = re.sub(r"[^\w\s\-\.]", "_", filename)
+    filename = re.sub(r"_{2,}", "_", filename)
+    return filename.strip("_") or "unknown"
 
 
 @router.post("/upload", response_model=UploadResponse)
@@ -43,7 +45,7 @@ async def upload_document(file: UploadFile = File(...), db: AsyncSession = Depen
         if file_size > MAX_FILE_SIZE:
             raise HTTPException(
                 status_code=413,
-                detail=f"File too large: {file_size / (1024*1024):.1f} MB (max 50 MB)",
+                detail=f"File too large: {file_size / (1024 * 1024):.1f} MB (max 50 MB)",
             )
 
         with open(tmp_file, "wb") as f:
@@ -55,10 +57,16 @@ async def upload_document(file: UploadFile = File(...), db: AsyncSession = Depen
 
         bm25 = get_bm25_index()
         bm25_chunks = [
-            {"text": c["text"], "page_num": c["page_num"], "document_id": doc_id, "filename": filename}
+            {
+                "text": c["text"],
+                "page_num": c["page_num"],
+                "document_id": doc_id,
+                "filename": filename,
+                "chunk_id": c["id"],
+            }
             for c in chunks
         ]
-        bm25.add(bm25_chunks)
+        bm25.replace_document(doc_id, bm25_chunks)
 
         record = DocumentRecord(
             id=doc_id,
@@ -83,12 +91,17 @@ async def upload_document(file: UploadFile = File(...), db: AsyncSession = Depen
         raise
     except Exception as e:
         record = DocumentRecord(
-            id=doc_id, filename=filename, doc_type=doc_type.value,
-            file_size=0, status=f"error: {str(e)[:200]}",
+            id=doc_id,
+            filename=filename,
+            doc_type=doc_type.value,
+            file_size=0,
+            status=f"error: {str(e)[:200]}",
         )
         db.add(record)
         await db.commit()
-        raise HTTPException(status_code=500, detail=f"Failed to process {filename}: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Failed to process {filename}: {str(e)}"
+        ) from e
     finally:
         shutil.rmtree(tmp_dir, ignore_errors=True)
 
@@ -96,13 +109,18 @@ async def upload_document(file: UploadFile = File(...), db: AsyncSession = Depen
 @router.get("/documents")
 async def list_documents(db: AsyncSession = Depends(get_db)):
     from sqlalchemy import select
+
     result = await db.execute(select(DocumentRecord).order_by(DocumentRecord.uploaded_at.desc()))
     docs = result.scalars().all()
     return [
         {
-            "id": d.id, "filename": d.filename, "doc_type": d.doc_type,
-            "file_size": d.file_size, "page_count": d.page_count,
-            "chunk_count": d.chunk_count, "status": d.status,
+            "id": d.id,
+            "filename": d.filename,
+            "doc_type": d.doc_type,
+            "file_size": d.file_size,
+            "page_count": d.page_count,
+            "chunk_count": d.chunk_count,
+            "status": d.status,
             "uploaded_at": d.uploaded_at.isoformat() if d.uploaded_at else None,
         }
         for d in docs
@@ -111,9 +129,11 @@ async def list_documents(db: AsyncSession = Depends(get_db)):
 
 @router.delete("/documents/{doc_id}")
 async def delete_document(doc_id: str, db: AsyncSession = Depends(get_db)):
-    from sqlalchemy import select, delete
-    from app.embeddings import delete_document_chunks
+    from sqlalchemy import delete, select
+
     from app.database import AnalysisRecord
+    from app.embeddings import delete_document_chunks
+    from app.search import get_bm25_index
 
     result = await db.execute(select(DocumentRecord).where(DocumentRecord.id == doc_id))
     doc = result.scalar_one_or_none()
@@ -121,6 +141,7 @@ async def delete_document(doc_id: str, db: AsyncSession = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Document not found")
 
     delete_document_chunks(doc_id)
+    get_bm25_index().remove_document(doc_id)
     await db.execute(delete(AnalysisRecord).where(AnalysisRecord.document_id == doc_id))
     await db.execute(delete(DocumentRecord).where(DocumentRecord.id == doc_id))
     await db.commit()

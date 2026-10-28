@@ -147,7 +147,7 @@ export default function AnalysisPage() {
                       <div className="bg-gray-50 rounded p-2 mb-2">
                         <span className="text-xs text-gray-400">Evidence: </span>
                         {risk.evidence.map((e, j) => (
-                          <span key={j} className="text-xs text-gray-600 italic">"{e.text}" </span>
+                          <span key={j} className="text-xs text-gray-600 italic">&ldquo;{e.text}&rdquo; </span>
                         ))}
                       </div>
                     )}

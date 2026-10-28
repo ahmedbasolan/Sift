@@ -1,6 +1,6 @@
 from pathlib import Path
-from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 DATA_DIR = BASE_DIR / "data"
@@ -15,6 +15,7 @@ class Settings(BaseSettings):
     DEBUG: bool = False
 
     GROQ_API_KEY: str = ""
+    API_KEY: str = ""
     GROQ_MODEL: str = "openai/gpt-oss-120b"
     GROQ_BASE_URL: str = "https://api.groq.com/openai/v1"
 
