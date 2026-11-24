@@ -1,4 +1,5 @@
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || '';
+// Unset in local dev: go through the `/api` rewrite in next.config.js to the backend on :8000.
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || '/api';
 
 export interface Document {
   id: string;

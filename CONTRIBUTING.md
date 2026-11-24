@@ -14,7 +14,7 @@ Thank you for your interest in contributing! This document outlines how to get s
    ```bash
    cd backend
    pip install -r requirements.txt
-   pip install -e ".[dev]"
+   pip install pytest pytest-asyncio httpx ruff mypy
    cp .env.example .env
    # Add your GROQ_API_KEY to .env
    ```
