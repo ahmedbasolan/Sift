@@ -5,13 +5,12 @@
 [![Next.js 14](https://img.shields.io/badge/Next.js-14-black)](https://nextjs.org)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-green)](https://fastapi.tiangolo.com)
 [![CI](https://github.com/ahmedbasolan/Sift/actions/workflows/ci.yml/badge.svg)](https://github.com/ahmedbasolan/Sift/actions/workflows/ci.yml)
-[![Code Quality](https://img.shields.io/badge/Code_Quality-Ruff%2BMypy-orange)](https://github.com/ahmedbasolan/Sift)
 
-AI-powered due diligence copilot. Upload financial documents, get source-backed risk assessments, growth opportunities, and executive summaries in seconds.
+AI-powered due diligence copilot. Upload financial documents, get source-backed risk assessments, growth opportunities, and executive summaries.
 
 ## What It Does
 
-Upload any financial document — 10-K filings, pitch decks, annual reports, investor presentations — and Sift instantly:
+Upload a financial document — 10-K filing, pitch deck, annual report, investor presentation — and Sift:
 
 - Generates an **executive summary** with company overview and recommendation
 - Identifies **risks** across 5 categories (market, financial, regulatory, operational, competitive) with severity scoring and evidence
@@ -57,18 +56,18 @@ Ready-to-use sample documents in `sample_data/`. **All of them are fictional**: 
 ## Architecture
 
 ```
-┌──────────────┐     ┌──────────────┐     ┌─────────────┐
-│   Frontend    │────▶│    Backend    │────▶│  Groq API    │
-│   Next.js     │     │   FastAPI     │     │  (LLM)       │
-│   :3000       │     │   :8000       │     └─────────────┘
-└──────────────┘     └──────┬───────┘
-                           │
-                    ┌──────┴───────┐
-                    │              │
-              ┌─────▼─────┐ ┌─────▼─────┐
-              │ ChromaDB   │ │  SQLite    │
-              │ (vectors)  │ │ (metadata) │
-              └───────────┘ └───────────┘
+┌────────────┐      ┌────────────┐      ┌────────────┐
+│  Frontend  │─────▶│  Backend   │─────▶│  Groq API  │
+│  Next.js   │      │  FastAPI   │      │  (LLM)     │
+│  :3000     │      │  :8000     │      └────────────┘
+└────────────┘      └─────┬──────┘
+                          │
+                   ┌──────┴──────┐
+                   ▼             ▼
+            ┌────────────┐ ┌────────────┐
+            │  ChromaDB  │ │   SQLite   │
+            │ (vectors)  │ │ (metadata) │
+            └────────────┘ └────────────┘
 ```
 
 ## Quick Start
